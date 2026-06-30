@@ -36,6 +36,7 @@ export default function RootLayout({
             <div className="hidden md:flex items-center gap-8">
               <Link href="/" className="text-sm text-gray-400 hover:text-white transition">Home</Link>
               <Link href="/events" className="text-sm text-gray-400 hover:text-white transition">Events</Link>
+              <Link href="/gallery" className="text-sm text-gray-400 hover:text-white transition">Gallery</Link>
               <Link href="/planners" className="text-sm text-gray-400 hover:text-white transition">For Planners</Link>
               <Link href="/contact" className="text-sm text-gray-400 hover:text-white transition">Contact</Link>
             </div>
@@ -56,6 +57,7 @@ export default function RootLayout({
             <div className="md:hidden flex flex-col gap-1 mt-4 pb-2">
               <Link href="/" onClick={() => setMenuOpen(false)} className="text-sm text-gray-400 hover:text-white transition py-2 px-2 rounded-lg hover:bg-white/5">Home</Link>
               <Link href="/events" onClick={() => setMenuOpen(false)} className="text-sm text-gray-400 hover:text-white transition py-2 px-2 rounded-lg hover:bg-white/5">Events</Link>
+              <Link href="/gallery" onClick={() => setMenuOpen(false)} className="text-sm text-gray-400 hover:text-white transition py-2 px-2 rounded-lg hover:bg-white/5">Gallery</Link>
               <Link href="/planners" onClick={() => setMenuOpen(false)} className="text-sm text-gray-400 hover:text-white transition py-2 px-2 rounded-lg hover:bg-white/5">For Planners</Link>
               <Link href="/contact" onClick={() => setMenuOpen(false)} className="text-sm text-gray-400 hover:text-white transition py-2 px-2 rounded-lg hover:bg-white/5">Contact</Link>
             </div>
@@ -89,6 +91,7 @@ export default function RootLayout({
                   <div className="flex flex-col gap-2">
                     <Link href="/" className="text-gray-500 text-sm hover:text-white transition">Home</Link>
                     <Link href="/events" className="text-gray-500 text-sm hover:text-white transition">Events</Link>
+                    <Link href="/gallery" className="text-gray-500 text-sm hover:text-white transition">Gallery</Link>
                     <Link href="/tickets" className="text-gray-500 text-sm hover:text-white transition">Get Tickets</Link>
                   </div>
                 </div>

@@ -1,0 +1,36 @@
+name: Daily Event Sync
+
+# Runs every day at 3:00 AM Nairobi time (EAT, UTC+3) = 0:00 UTC.
+# Same clock as the existing Vercel "cleanup-events" cron, so new events
+# arrive and past events move to the gallery on the same nightly cycle.
+on:
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch: {} # lets you trigger it manually from the Actions tab
+
+jobs:
+  sync-events:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: scripts
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          playwright install chromium --with-deps
+
+      - name: Run daily event sync
+        env:
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          EVENT_CITIES: "Nairobi:Kenya"
+        run: python daily_event_sync.py

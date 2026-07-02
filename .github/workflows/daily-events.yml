@@ -11,7 +11,7 @@ on:
 jobs:
   sync-events:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 50
     defaults:
       run:
         working-directory: scripts
@@ -32,5 +32,5 @@ jobs:
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          EVENT_CITIES: "Nairobi:Kenya"
+          EVENT_CITIES: "Nairobi:Kenya,Mombasa:Kenya,Kisumu:Kenya,Eldoret:Kenya,Machakos:Kenya"
         run: python daily_event_sync.py

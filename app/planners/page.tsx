@@ -150,26 +150,24 @@ export default function PlannersPage() {
     <div className="min-h-screen bg-[#0a0a0a]">
 
       {/* HERO */}
-      <section className="relative px-6 py-24 text-center overflow-hidden border-b border-white/10">
-        <div className="absolute inset-0 bg-gradient-to-b from-purple-600/10 to-transparent pointer-events-none" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-green-400/5 rounded-full blur-3xl pointer-events-none" />
-        <div className="relative z-10 max-w-3xl mx-auto">
-          <span className="inline-block text-xs font-semibold tracking-widest uppercase text-purple-400 border border-purple-400/30 bg-purple-400/10 px-4 py-1.5 rounded-full mb-6">
+      <section className="relative overflow-hidden border-b border-white/10 px-6 py-24 text-center">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(74,222,128,0.16),_transparent_40%)]" />
+        <div className="pointer-events-none absolute left-1/2 top-1/2 h-96 w-96 -translate-x-1/2 -translate-y-1/2 rounded-full bg-green-400/10 blur-3xl" />
+        <div className="relative z-10 mx-auto max-w-4xl">
+          <span className="mb-6 inline-block rounded-full border border-purple-400/30 bg-purple-400/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.3em] text-purple-400">
             For Event Planners
           </span>
-          <h1 className="text-4xl md:text-6xl font-bold text-white tracking-tight mb-6 leading-tight">
-            Grow your event.<br />
-            <span className="text-green-400">Reach more people.</span>
+          <h1 className="mb-6 text-4xl font-bold leading-tight tracking-tight text-white md:text-6xl">
+            Plan Exceptional Events With Confidence
           </h1>
-          <p className="text-gray-400 text-lg max-w-xl mx-auto mb-10 leading-relaxed">
-            Join hundreds of event planners already using TicketWave KE to sell tickets,
-            manage attendees and grow their audience across Kenya.
+          <p className="mx-auto mb-10 max-w-2xl text-lg leading-relaxed text-gray-400">
+            Everything you need to organize, manage, promote, and sell tickets from one powerful platform.
           </p>
-          <div className="flex flex-wrap gap-4 justify-center">
-            <a href="#apply" className="bg-green-400 text-black px-8 py-3.5 rounded-full text-sm font-bold hover:bg-green-300 transition">
+          <div className="flex flex-wrap justify-center gap-4">
+            <a href="#apply" className="rounded-full bg-green-400 px-8 py-3.5 text-sm font-bold text-black transition hover:bg-green-300">
               Apply as a Planner
             </a>
-            <a href="#how-it-works" className="border border-white/20 text-white px-8 py-3.5 rounded-full text-sm font-semibold hover:bg-white/5 transition">
+            <a href="#how-it-works" className="rounded-full border border-white/20 px-8 py-3.5 text-sm font-semibold text-white transition hover:bg-white/5">
               How it works
             </a>
           </div>

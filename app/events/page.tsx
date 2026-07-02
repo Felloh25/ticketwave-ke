@@ -31,6 +31,7 @@ export default function EventsPage() {
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState("All");
   const [search, setSearch] = useState("");
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchEvents() {
@@ -56,6 +57,28 @@ export default function EventsPage() {
       event.location.toLowerCase().includes(search.toLowerCase());
     return matchCategory && matchSearch;
   });
+
+  async function handleShare(event: Event) {
+    const shareUrl = window.location.origin + "/tickets?event=" + encodeURIComponent(event.title);
+    const shareText = "Check out " + event.title + " on " + event.date + " at " + event.location + " — book your ticket on TicketWave KE!";
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: event.title,
+          text: shareText,
+          url: shareUrl,
+        });
+      } catch (err) {
+        // user cancelled, do nothing
+      }
+    } else {
+      navigator.clipboard.writeText(shareText + " " + shareUrl);
+      setCopiedId(event.id);
+      setTimeout(() => setCopiedId(null), 2000);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[#0a0a0a]">
       <section className="px-6 py-16 border-b border-white/10 text-center">
@@ -148,16 +171,31 @@ export default function EventsPage() {
                     <span className="text-gray-600">📍</span>
                     <p className="text-xs text-gray-500">{event.location}</p>
                   </div>
-                  <div className="flex items-center justify-between pt-3 border-t border-white/10">
+
+                  <div className="flex items-center justify-between mb-3">
                     <span className="text-sm font-bold text-green-400">
                       {event.price === 0 ? "Free" : "KES " + event.price.toLocaleString()}
                     </span>
-                    <a
-                      href={"/tickets?event=" + encodeURIComponent(event.title)}
-                      className="text-xs bg-green-400 text-black px-4 py-2 rounded-full hover:bg-green-300 transition font-bold">
-                      Get Ticket
-                    </a>
+                    <button
+                      onClick={() => handleShare(event)}
+                      className="flex items-center gap-1.5 text-xs text-gray-400 border border-white/10 px-3 py-1.5 rounded-full hover:border-green-400/40 hover:text-green-400 transition">
+                      {copiedId === event.id ? (
+                        <>
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12" /></svg>
+                          Copied
+                        </>
+                      ) : (
+                        <>
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" /></svg>
+                          Share
+                        </>
+                      )}
+                    </button>
                   </div>
+
+                  <a href={"/tickets?event=" + encodeURIComponent(event.title)} className="block text-center text-xs bg-green-400 text-black px-4 py-2.5 rounded-full hover:bg-green-300 transition font-bold w-full">
+                    Get Ticket
+                  </a>
                 </div>
               </div>
             ))}

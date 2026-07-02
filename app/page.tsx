@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 type Event = {
   id: string;
   title: string;
+  description: string;
   date: string;
   location: string;
   price: number;
@@ -30,13 +31,16 @@ const categories = [
   { name: "Sports & Fitness", emoji: "⚽", count: "60+ events", color: "hover:border-blue-400" },
   { name: "Art & Culture", emoji: "🎨", count: "35+ events", color: "hover:border-pink-400" },
   { name: "Comedy & Theatre", emoji: "🎭", count: "28+ events", color: "hover:border-yellow-400" },
-  { name: "Networking", emoji: "🤝", count: "55+ events", color: "hover:border-purple-400" },
+  { name: "Family & Kids", emoji: "👨‍👩‍👧", count: "40+ events", color: "hover:border-purple-400" },
   { name: "Education", emoji: "📚", count: "40+ events", color: "hover:border-green-400" },
 ];
 
 export default function Home() {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
+  const [email, setEmail] = useState("");
+  const [subscribed, setSubscribed] = useState(false);
+  const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
     async function fetchEvents() {
@@ -56,8 +60,61 @@ export default function Home() {
     fetchEvents();
   }, []);
 
+  useEffect(() => {
+    const seen = localStorage.getItem("tw_welcome_seen");
+    if (!seen) {
+      const timer = setTimeout(() => {
+        setShowModal(true);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
+  function closeModal() {
+    setShowModal(false);
+    localStorage.setItem("tw_welcome_seen", "true");
+  }
+
   return (
     <div className="flex flex-col bg-[#0a0a0a]">
+
+      {/* WELCOME MODAL */}
+      {showModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={closeModal} />
+          <div className="relative bg-[#111] border border-white/10 rounded-3xl p-8 max-w-md w-full shadow-2xl z-10">
+            <button
+              onClick={closeModal}
+              className="absolute top-4 right-4 text-gray-500 hover:text-white transition w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10">
+              ✕
+            </button>
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-green-400/10 border border-green-400/20 rounded-2xl flex items-center justify-center mx-auto mb-4 text-3xl">
+                🎟️
+              </div>
+              <h2 className="text-2xl font-bold text-white mb-2">
+                Welcome to TicketWave<span className="text-green-400">KE</span>
+              </h2>
+              <p className="text-gray-400 text-sm leading-relaxed">
+                Create your free account to book tickets faster, save your favorite events, receive exclusive offers, and manage all your bookings in one place.
+              </p>
+            </div>
+            <div className="flex flex-col gap-3">
+              <Link
+                href="/register"
+                onClick={closeModal}
+                className="block w-full text-center bg-green-400 text-black py-3 rounded-full font-bold text-sm hover:bg-green-300 hover:scale-105 transition-all shadow-lg shadow-green-400/20">
+                Sign Up — It is Free
+              </Link>
+              <button
+                onClick={closeModal}
+                className="w-full border border-white/10 text-gray-400 py-3 rounded-full text-sm hover:bg-white/5 hover:text-white transition">
+                Maybe Later
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* HERO SECTION */}
       <section className="relative min-h-[90vh] flex flex-col items-center justify-center text-center px-6 overflow-hidden border-b border-white/10">
@@ -65,22 +122,22 @@ export default function Home() {
         <div className="absolute top-1/2 left-1/4 w-[300px] h-[300px] bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
         <div className="relative z-10">
           <span className="inline-block text-xs font-semibold tracking-widest uppercase text-green-400 border border-green-400/30 bg-green-400/10 px-4 py-1.5 rounded-full mb-8">
-            A growing platform for discovering events across Kenya
+            Kenya's growing events platform
           </span>
           <h1 className="text-5xl md:text-7xl font-bold tracking-tight max-w-4xl leading-tight mb-6 text-white">
             Discover Events.<br />
             <span className="text-green-400">Create Memories.</span>
           </h1>
           <p className="text-lg text-gray-400 max-w-xl mx-auto mb-10 leading-relaxed">
-            From concerts to hackathons, comedy nights to food festivals —
-            TicketWave KE helps young people discover events they will enjoy.
+            Concerts, family days, hackathons, food festivals and more —
+            discover events near you, for every age and every mood.
           </p>
           <div className="flex flex-wrap gap-4 justify-center">
             <Link href="/events" className="bg-green-400 text-black px-8 py-3.5 rounded-full text-sm font-bold hover:bg-green-300 transition shadow-lg shadow-green-400/20">
               Browse Events
             </Link>
-            <Link href="/planners" className="border border-white/20 text-white px-8 py-3.5 rounded-full text-sm font-semibold hover:border-white/50 hover:bg-white/5 transition">
-              List Your Event
+            <Link href="/register" className="border border-white/20 text-white px-8 py-3.5 rounded-full text-sm font-semibold hover:border-white/50 hover:bg-white/5 transition">
+              Sign Up Free
             </Link>
           </div>
           <div className="flex flex-wrap gap-6 justify-center mt-12 text-xs text-gray-500 font-medium">
@@ -114,7 +171,7 @@ export default function Home() {
           <div className="flex items-end justify-between mb-10">
             <div>
               <h2 className="text-2xl font-bold text-white mb-1">Browse by Category</h2>
-              <p className="text-gray-500 text-sm">Find events that match your vibe</p>
+              <p className="text-gray-500 text-sm">Something for everyone, every age</p>
             </div>
             <Link href="/events" className="text-sm font-medium text-green-400 hover:text-green-300 transition">
               See all →
@@ -135,7 +192,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* FEATURED EVENTS SECTION */}
+      {/* UPCOMING EVENTS SECTION */}
       <section className="px-6 py-20 w-full border-b border-white/10">
         <div className="max-w-6xl mx-auto">
           <div className="flex items-end justify-between mb-10">
@@ -192,11 +249,9 @@ export default function Home() {
                       <span className="text-sm font-bold text-green-400">
                         {event.price === 0 ? "Free" : "KES " + event.price.toLocaleString()}
                       </span>
-                      
-                       <a href={"/tickets?event=" + encodeURIComponent(event.title)}
-                        className="text-xs bg-green-400 text-black px-4 py-2 rounded-full hover:bg-green-300 transition font-bold">
+                      <Link href={"/tickets?event=" + encodeURIComponent(event.title)} className="text-xs bg-green-400 text-black px-4 py-2 rounded-full hover:bg-green-300 transition font-bold">
                         Get Ticket
-                      </a>
+                      </Link>
                     </div>
                   </div>
                 </div>
@@ -233,6 +288,34 @@ export default function Home() {
         </div>
       </section>
 
+      {/* NEWSLETTER SIGNUP */}
+      <section className="px-6 py-14 border-b border-white/10 bg-white/5">
+        <div className="max-w-xl mx-auto text-center">
+          <h2 className="text-xl font-bold text-white mb-2">Stay in the loop</h2>
+          <p className="text-gray-400 text-sm mb-6">
+            Get weekly event updates delivered to your inbox. Never miss out again.
+          </p>
+          {subscribed ? (
+            <p className="text-green-400 font-semibold">You are subscribed! Thank you.</p>
+          ) : (
+            <div className="flex gap-3 max-w-md mx-auto">
+              <input
+                type="email"
+                placeholder="Enter your email..."
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="flex-1 bg-white/10 border border-white/10 rounded-full px-5 py-3 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-green-400/50 transition"
+              />
+              <button
+                onClick={() => { if (email) setSubscribed(true); }}
+                className="bg-green-400 text-black px-6 py-3 rounded-full text-sm font-bold hover:bg-green-300 transition whitespace-nowrap">
+                Subscribe
+              </button>
+            </div>
+          )}
+        </div>
+      </section>
+
       {/* CTA SECTION */}
       <section className="relative px-6 py-24 flex flex-col items-center text-center overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-green-400/10 via-transparent to-purple-600/10 pointer-events-none" />
@@ -241,7 +324,7 @@ export default function Home() {
             Planning an event?
           </h2>
           <p className="text-gray-400 max-w-md mb-8 leading-relaxed">
-            List your event on TicketWave KE and reach thousands of young Kenyans looking for their next experience.
+            List your event on TicketWave KE and reach people across Kenya looking for their next experience.
           </p>
           <Link href="/planners" className="bg-green-400 text-black px-8 py-3.5 rounded-full text-sm font-bold hover:bg-green-300 transition shadow-lg shadow-green-400/20">
             Get Started as a Planner

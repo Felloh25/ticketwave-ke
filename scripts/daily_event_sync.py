@@ -850,7 +850,13 @@ def parse_price_to_kes(cost: str | None) -> int:
 
 
 def format_display_date(date_str: str | None, time_str: str | None) -> str:
-    """Combine YYYY-MM-DD + time into TicketWave's 'Sat, Jul 12 - 4:00 PM' style."""
+    """Combine YYYY-MM-DD + time into 'Sat, Jul 12, 2026 - 4:00 PM' style.
+
+    The year MUST be included: the cleanup-events cron re-parses this string
+    with JavaScript's `new Date(...)`, and a date string with no year silently
+    defaults to 2001 — which would make every synced event look like it's
+    already in the past and get swept into the gallery immediately.
+    """
     if not date_str:
         return time_str or ""
     try:
@@ -858,7 +864,7 @@ def format_display_date(date_str: str | None, time_str: str | None) -> str:
     except ValueError:
         return f"{date_str} {time_str or ''}".strip()
 
-    base = d.strftime("%a, %b %d")
+    base = d.strftime("%a, %b %d, %Y")
     if time_str:
         return f"{base} - {time_str}"
     return base

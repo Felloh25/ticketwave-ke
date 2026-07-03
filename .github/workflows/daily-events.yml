@@ -3,6 +3,12 @@ name: Daily Event Sync
 # Runs every day at 3:00 AM Nairobi time (EAT, UTC+3) = 0:00 UTC.
 # Same clock as the existing Vercel "cleanup-events" cron, so new events
 # arrive and past events move to the gallery on the same nightly cycle.
+#
+# Each city runs as its OWN parallel job instead of one long sequential
+# job. Scraping 5 cities back-to-back in a single job was taking well
+# over 45 minutes and hitting the timeout. Running them in parallel
+# keeps each job well under 25 minutes, and one slow city can't stall
+# the others.
 on:
   schedule:
     - cron: "0 0 * * *"
@@ -11,7 +17,11 @@ on:
 jobs:
   sync-events:
     runs-on: ubuntu-latest
-    timeout-minutes: 50
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false # one city failing shouldn't cancel the others
+      matrix:
+        city: [Nairobi, Mombasa, Kisumu, Eldoret, Machakos]
     defaults:
       run:
         working-directory: scripts
@@ -27,10 +37,10 @@ jobs:
           pip install -r requirements.txt
           playwright install chromium --with-deps
 
-      - name: Run daily event sync
+      - name: Sync events for ${{ matrix.city }}
         env:
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          EVENT_CITIES: "Nairobi:Kenya,Mombasa:Kenya,Kisumu:Kenya,Eldoret:Kenya,Machakos:Kenya"
+          EVENT_CITIES: "${{ matrix.city }}:Kenya"
         run: python daily_event_sync.py

@@ -2,3 +2,4 @@ google-genai
 playwright
 python-dotenv
 supabase
+requests

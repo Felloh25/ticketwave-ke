@@ -9,6 +9,7 @@ import time
 from datetime import datetime, timedelta
 import re
 import hashlib
+import requests
 
 # Fix Windows cp1252 terminal encoding issues with special characters
 if sys.stdout.encoding and sys.stdout.encoding.lower() != 'utf-8':
@@ -826,6 +827,38 @@ CATEGORY_MAP = {
 
 FALLBACK_IMAGE = "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=600&q=80"
 
+IMAGE_CHECK_HEADERS = {
+    # Some sites block requests with no browser-like User-Agent.
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+}
+
+
+def resolve_image_url(image_url: str | None) -> str:
+    """Confirm a scraped image URL actually loads a real image before using it.
+
+    Scraped URLs sometimes turn out relative, expired, or hotlink-blocked —
+    those render as a broken image icon on the site. This does a quick check
+    and falls back to a generic placeholder instead of a broken link.
+    """
+    if not image_url or not image_url.startswith("http"):
+        return FALLBACK_IMAGE
+    try:
+        resp = requests.head(
+            image_url, headers=IMAGE_CHECK_HEADERS, timeout=6, allow_redirects=True
+        )
+        # Some CDNs don't support HEAD properly — treat those as inconclusive
+        # and fall through to a lightweight GET instead of trusting a 405/403.
+        if resp.status_code >= 400:
+            resp = requests.get(
+                image_url, headers=IMAGE_CHECK_HEADERS, timeout=6, stream=True
+            )
+        content_type = resp.headers.get("content-type", "")
+        if resp.status_code < 400 and content_type.startswith("image/"):
+            return image_url
+    except Exception:
+        pass
+    return FALLBACK_IMAGE
+
 # Very rough, static conversion for non-KES prices. Not live exchange rates —
 # good enough to avoid showing "USD 140" as literally 140 KES, but treat
 # converted prices as approximate and spot-check them in the admin dashboard.
@@ -927,7 +960,7 @@ def persist_events_to_supabase(events: list[dict]) -> tuple[int, int]:
             "location": event.get("location") or "TBA",
             "price": parse_price_to_kes(event.get("cost")),
             "tag": CATEGORY_MAP.get(event.get("category") or "", "Music"),
-            "image_url": event.get("image_url") or FALLBACK_IMAGE,
+            "image_url": resolve_image_url(event.get("image_url")),
             "status": "approved",
         }
 

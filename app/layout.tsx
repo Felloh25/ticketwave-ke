@@ -181,10 +181,10 @@ export default function RootLayout({
                     { Icon: FaWhatsapp, label: "WhatsApp" },
                   ].map(({ Icon, label }) => (
                     
-                      key={label}
+                     <a key={label}
                       href="#"
                       title={label}
-                      className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 text-gray-400 transition hover:border-green-400/40 hover:text-green-400 hover:bg-green-400/5">
+                     className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 text-gray-400 transition hover:border-green-400/40 hover:text-green-400 hover:bg-green-400/5">
                       <Icon size={15} />
                     </a>
                   ))}

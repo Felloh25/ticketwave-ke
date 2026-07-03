@@ -17,11 +17,21 @@ on:
 jobs:
   sync-events:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: ${{ matrix.timeout }}
     strategy:
       fail-fast: false # one city failing shouldn't cancel the others
       matrix:
-        city: [Nairobi, Mombasa, Kisumu, Eldoret, Machakos]
+        include:
+          - city: Nairobi
+            timeout: 40
+          - city: Mombasa
+            timeout: 25
+          - city: Kisumu
+            timeout: 20
+          - city: Eldoret
+            timeout: 20
+          - city: Machakos
+            timeout: 20
     defaults:
       run:
         working-directory: scripts

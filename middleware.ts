@@ -48,6 +48,14 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
+  // /admin specifically also requires the admin role, not just any login.
+  if (
+    request.nextUrl.pathname.startsWith("/admin") &&
+    user.app_metadata?.role !== "admin"
+  ) {
+    return NextResponse.redirect(new URL("/", request.url));
+  }
+
   return response;
 }
 

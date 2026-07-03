@@ -54,17 +54,28 @@ type ContactMessage = {
   created_at: string;
 };
 
-const ADMIN_PASSWORD = "ticketwave2026";
-
 export default function AdminPage() {
-  const [password, setPassword] = useState("");
   const [authed, setAuthed] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const [activeTab, setActiveTab] = useState("events");
   const [events, setEvents] = useState<Event[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [applications, setApplications] = useState<PlannerApplication[]>([]);
   const [messages, setMessages] = useState<ContactMessage[]>([]);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // The middleware already blocks logged-out visitors before this page
+    // ever loads. This second check confirms the logged-in user actually
+    // has the admin role — not just any account — before showing anything.
+    async function checkAdminRole() {
+      const { data } = await supabase.auth.getUser();
+      const role = data.user?.app_metadata?.role;
+      setAuthed(role === "admin");
+      setCheckingAuth(false);
+    }
+    checkAdminRole();
+  }, []);
 
   useEffect(() => {
     if (authed) {
@@ -128,32 +139,23 @@ export default function AdminPage() {
     });
   }
 
+  if (checkingAuth) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+        <p className="text-gray-500 text-sm">Checking access...</p>
+      </div>
+    );
+  }
+
   if (!authed) {
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center px-6">
         <div className="bg-white/5 border border-white/10 rounded-2xl p-10 w-full max-w-sm text-center">
-          <span className="text-4xl mb-4 block">🔐</span>
-          <h1 className="text-white font-bold text-xl mb-2">Admin Access</h1>
-          <p className="text-gray-500 text-sm mb-6">Enter your admin password to continue</p>
-          <input
-            type="password"
-            placeholder="Enter password..."
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && password === ADMIN_PASSWORD && setAuthed(true)}
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-green-400/50 transition mb-4"
-          />
-          <button
-            onClick={() => {
-              if (password === ADMIN_PASSWORD) {
-                setAuthed(true);
-              } else {
-                alert("Wrong password!");
-              }
-            }}
-            className="bg-green-400 text-black px-8 py-3 rounded-full text-sm font-bold hover:bg-green-300 transition w-full">
-            Login
-          </button>
+          <span className="text-4xl mb-4 block">⛔</span>
+          <h1 className="text-white font-bold text-xl mb-2">Access Denied</h1>
+          <p className="text-gray-500 text-sm">
+            Your account doesn&apos;t have admin access. If you believe this is a mistake, contact the site owner.
+          </p>
         </div>
       </div>
     );

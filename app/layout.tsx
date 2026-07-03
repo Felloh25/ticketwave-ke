@@ -1,10 +1,11 @@
 "use client";
-import { useState,useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { FaTiktok, FaXTwitter, FaInstagram, FaWhatsapp } from "react-icons/fa6";
+import { Analytics } from "@vercel/analytics/next";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -180,7 +181,7 @@ export default function RootLayout({
                     { Icon: FaWhatsapp, label: "WhatsApp" },
                   ].map(({ Icon, label }) => (
                     
-                     <a key={label}
+                      key={label}
                       href="#"
                       title={label}
                       className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 text-gray-400 transition hover:border-green-400/40 hover:text-green-400 hover:bg-green-400/5">
@@ -266,7 +267,7 @@ export default function RootLayout({
                   href="/register"
                   onClick={closeWelcome}
                   className="w-full text-center bg-green-400 text-black py-3 rounded-full font-bold text-sm hover:bg-green-300 hover:scale-105 transition-all shadow-lg shadow-green-400/20">
-                  Sign Up 
+                  Sign Up
                 </Link>
                 <button
                   onClick={closeWelcome}
@@ -281,6 +282,9 @@ export default function RootLayout({
             </div>
           </div>
         )}
+
+        {/* VERCEL ANALYTICS */}
+        <Analytics />
 
       </body>
     </html>

@@ -17,8 +17,16 @@ if sys.stdout.encoding and sys.stdout.encoding.lower() != 'utf-8':
 load_dotenv()
 client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
 
-# Ordered by preference — falls back if quota exceeded or unavailable
-MODELS = ["gemini-2.5-flash", "gemini-2.0-flash-lite-001", "gemini-2.0-flash-001"]
+# Ordered by preference — falls back if quota exceeded or unavailable.
+# NOTE: gemini-2.0-flash-001 / gemini-2.0-flash-lite-001 were deprecated by
+# Google on June 1, 2026 — don't add them back even if you see them in older
+# examples online, they'll just fail.
+MODELS = ["gemini-2.5-flash-lite", "gemini-2.5-flash"]
+
+# Free tier RPM is low (roughly 5-15 requests/minute depending on model).
+# Waiting this long BEFORE each call, rather than only reacting after a 429,
+# keeps us under that ceiling instead of constantly tripping it.
+FREE_TIER_PACING_SECONDS = 7
 
 
 # ---------------------------------------------------------------------------
@@ -26,6 +34,7 @@ MODELS = ["gemini-2.5-flash", "gemini-2.0-flash-lite-001", "gemini-2.0-flash-001
 # ---------------------------------------------------------------------------
 
 def generate(prompt: str) -> str:
+    time.sleep(FREE_TIER_PACING_SECONDS)
     for model_id in MODELS:
         try:
             response = client.models.generate_content(
@@ -38,7 +47,7 @@ def generate(prompt: str) -> str:
             msg = str(e)
             if "429" in msg or "quota" in msg.lower():
                 match = re.search(r"retry_delay\s*\{\s*seconds:\s*(\d+)", msg)
-                wait = int(match.group(1)) + 2 if match else 15
+                wait = int(match.group(1)) + 2 if match else 20
                 print(f"  Quota hit on {model_id}, waiting {wait}s...")
                 time.sleep(wait)
                 continue
@@ -50,11 +59,12 @@ def generate(prompt: str) -> str:
 
 
 # Search-grounded models (grounding only available on flash variants)
-SEARCH_MODELS = ["gemini-2.0-flash-001", "gemini-2.5-flash"]
+SEARCH_MODELS = ["gemini-2.5-flash-lite", "gemini-2.5-flash"]
 
 def generate_with_search(prompt: str) -> tuple[str, list[str]]:
     """Generate with Google Search grounding. Returns (text, source_urls).
     Falls back to plain generate() if quota/billing not available."""
+    time.sleep(FREE_TIER_PACING_SECONDS)
     for model_id in SEARCH_MODELS:
         try:
             response = client.models.generate_content(
@@ -931,8 +941,27 @@ def persist_events_to_supabase(events: list[dict]) -> tuple[int, int]:
     return inserted, skipped
 
 
+ROTATION_CITIES = [
+    ("Nairobi", "Kenya"),
+    ("Mombasa", "Kenya"),
+    ("Kisumu", "Kenya"),
+    ("Eldoret", "Kenya"),
+    ("Machakos", "Kenya"),
+]
+
+
 def main():
-    cities = parse_cities()
+    # On the free Gemini tier, scraping several cities in one run reliably
+    # hits the quota. Instead, rotate ONE city per day (Mon->Nairobi,
+    # Tue->Mombasa, ...) so every city still gets synced regularly without
+    # exceeding free-tier limits. Set EVENT_CITIES explicitly to override
+    # this and force a specific city (handy for manual test runs).
+    if os.getenv("EVENT_CITIES", "").strip():
+        cities = parse_cities()
+    else:
+        weekday = datetime.utcnow().weekday()  # Monday = 0
+        cities = [ROTATION_CITIES[weekday % len(ROTATION_CITIES)]]
+
     all_events: list[dict] = []
 
     print("TICKETWAVE KE — DAILY EVENT SYNC")

@@ -14,12 +14,21 @@ export default function RegisterPage() {
     password: "",
   });
 
+  const passwordChecks = {
+    length: form.password.length >= 8,
+    uppercase: /[A-Z]/.test(form.password),
+    lowercase: /[a-z]/.test(form.password),
+    number: /[0-9]/.test(form.password),
+    special: /[^A-Za-z0-9]/.test(form.password),
+  };
+  const isPasswordValid = Object.values(passwordChecks).every(Boolean);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
 
-    if (form.password.length < 8) {
-      setError("Password must be at least 8 characters.");
+    if (!isPasswordValid) {
+      setError("Please meet all password requirements below.");
       return;
     }
 
@@ -142,14 +151,34 @@ export default function RegisterPage() {
                   {showPassword ? "Hide" : "Show"}
                 </button>
               </div>
-              <p className="text-xs text-gray-600 mt-1">
-                Use at least 8 characters with uppercase, lowercase, a number and a special character.
-              </p>
+              {form.password.length > 0 && (
+                <div className="flex flex-col gap-1 mt-2 bg-white/5 border border-white/10 rounded-lg p-3">
+                  {[
+                    { key: "length", label: "At least 8 characters" },
+                    { key: "uppercase", label: "One uppercase letter" },
+                    { key: "lowercase", label: "One lowercase letter" },
+                    { key: "number", label: "One number" },
+                    { key: "special", label: "One special character" },
+                  ].map(({ key, label }) => {
+                    const passed = passwordChecks[key as keyof typeof passwordChecks];
+                    return (
+                      <div key={key} className="flex items-center gap-2">
+                        <span className={"text-xs " + (passed ? "text-green-400" : "text-gray-600")}>
+                          {passed ? "✓" : "○"}
+                        </span>
+                        <span className={"text-xs " + (passed ? "text-gray-300" : "text-gray-600")}>
+                          {label}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || (form.password.length > 0 && !isPasswordValid)}
               className="w-full bg-green-400 text-black py-3.5 rounded-full font-bold text-sm hover:bg-green-300 hover:scale-105 transition-all shadow-lg shadow-green-400/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100 mt-2">
               {loading ? "Creating account..." : "Create Account"}
             </button>

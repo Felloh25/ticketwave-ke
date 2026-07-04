@@ -129,8 +129,7 @@ export default function Home() {
             <span className="text-green-400">Create Memories.</span>
           </h1>
           <p className="text-lg text-gray-400 max-w-xl mx-auto mb-10 leading-relaxed">
-            Concerts, family days, hackathons, food festivals and more —
-            discover events near you, for every age and every mood.
+            TicketWave KE is Kenya's event ticketing platform discover events, book tickets via M-Pesa, and manage your account
           </p>
           <div className="flex flex-wrap gap-4 justify-center">
             <Link href="/events" className="bg-green-400 text-black px-8 py-3.5 rounded-full text-sm font-bold hover:bg-green-300 transition shadow-lg shadow-green-400/20">

@@ -35,11 +35,10 @@ export default function RootLayout({
   const pathname = usePathname();
 
   useEffect(() => {
-    const hasSeenWelcome = localStorage.getItem("ticketwave-welcome");
-    if (!hasSeenWelcome) {
-      const timer = setTimeout(() => setShowWelcome(true), 2000);
-      return () => clearTimeout(timer);
-    }
+    // Disabled: this used to auto-pop a welcome/login prompt 2s after
+    // load, but Google's OAuth verification review flagged it as making
+    // the homepage "behind a login page" even though it was dismissible.
+    // Leaving showWelcome permanently false for now.
   }, []);
 
   useEffect(() => {

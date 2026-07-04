@@ -108,10 +108,8 @@ def generate_with_search(prompt: str) -> tuple[str, list[str]]:
 
 HASHTAGS: dict[str, list[str]] = {
     "nairobi": [
-        "nairobievents", "nairobiparty", "nairobiweekend", "nairobilife",
-        "nairobinightlife", "kenyaevents", "kenyaconcerts", "nairobifestivals",
-        "blanketsandwine", "solfestafrica", "nairobifood", "nairobicomedy",
-        "nairobigaming", "nairobitech", "nairobimusic",
+        "nairobievents", "nairobiparty", "nairobiweekend",
+        "kenyaconcerts", "blanketsandwine", "solfestafrica", "nairobimusic",
     ],
     "mombasa": [
         "mombasaevents", "mombasanightlife", "mombasaweekend", "coastevents",
@@ -132,15 +130,19 @@ HASHTAGS: dict[str, list[str]] = {
 
 
 def _hashtag_sources(city_slug: str) -> list[tuple[str, str]]:
-    """Build Instagram & TikTok hashtag URLs for a city."""
+    """Build Instagram hashtag URLs for a city.
+
+    TikTok hashtag pages used to be included too, but in practice every
+    single one burned a full Gemini call and still returned 0 events —
+    unlike Instagram pages, which short-circuit cheaply (no AI call) when
+    there's too little content to bother analyzing. Dropping TikTok cuts
+    a large chunk of wasted quota usage with no real loss.
+    """
     tags = HASHTAGS.get(city_slug, [])
     sources: list[tuple[str, str]] = []
     for tag in tags:
         sources.append(
             (f"https://www.instagram.com/explore/tags/{tag}/", f"IG #{tag}")
-        )
-        sources.append(
-            (f"https://www.tiktok.com/tag/{tag}", f"TikTok #{tag}")
         )
     return sources
 

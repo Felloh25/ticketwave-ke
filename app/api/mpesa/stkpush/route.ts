@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { initiateStkPush } from "@/lib/mpesa";
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
 
     // Save the CheckoutRequestID so the callback (and our polling endpoint)
     // can match Safaricom's response back to this specific order.
-    const { error } = await supabaseAdmin
+    const { error } = await getSupabaseAdmin()
       .from("orders")
       .update({
         checkout_request_id: result.CheckoutRequestID,

@@ -1,11 +1,10 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useState,useEffect } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { FaTiktok, FaXTwitter, FaInstagram, FaWhatsapp } from "react-icons/fa6";
-import { Analytics } from "@vercel/analytics/next";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -79,7 +78,7 @@ export default function RootLayout({
             {/* LOGO */}
             <Link href="/" className="flex items-center gap-2 flex-shrink-0">
               <div className="w-8 h-8 bg-green-400 rounded-lg flex items-center justify-center flex-shrink-0">
-                <span className="text-black font-bold text-xs">TW</span>
+                <span className="text-black font-bold text-xs">FM</span>
               </div>
               <span className="text-lg font-bold tracking-tight text-white md:text-xl">
                 TicketWave<span className="text-green-400">KE</span>
@@ -184,7 +183,7 @@ export default function RootLayout({
                      <a key={label}
                       href="#"
                       title={label}
-                     className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 text-gray-400 transition hover:border-green-400/40 hover:text-green-400 hover:bg-green-400/5">
+                      className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 text-gray-400 transition hover:border-green-400/40 hover:text-green-400 hover:bg-green-400/5">
                       <Icon size={15} />
                     </a>
                   ))}
@@ -216,8 +215,8 @@ export default function RootLayout({
                 <p className="mb-4 text-sm font-semibold text-white">Support</p>
                 <div className="flex flex-col gap-2.5">
                   <Link href="/contact" className="text-sm text-gray-500 transition hover:text-white">Help Center</Link>
-                  <Link href="/contact" className="text-sm text-gray-500 transition hover:text-white">Privacy Policy</Link>
-                  <Link href="/contact" className="text-sm text-gray-500 transition hover:text-white">Terms of Service</Link>
+                  <Link href="/privacy" className="text-sm text-gray-500 transition hover:text-white">Privacy Policy</Link>
+                  <Link href="/terms" className="text-sm text-gray-500 transition hover:text-white">Terms of Service</Link>
                   <Link href="/register" className="text-sm text-gray-500 transition hover:text-white">Create Account</Link>
                 </div>
                 <div className="mt-6 bg-green-400/10 border border-green-400/20 rounded-2xl p-4">
@@ -267,7 +266,7 @@ export default function RootLayout({
                   href="/register"
                   onClick={closeWelcome}
                   className="w-full text-center bg-green-400 text-black py-3 rounded-full font-bold text-sm hover:bg-green-300 hover:scale-105 transition-all shadow-lg shadow-green-400/20">
-                  Sign Up
+                  Sign Up 
                 </Link>
                 <button
                   onClick={closeWelcome}
@@ -282,9 +281,6 @@ export default function RootLayout({
             </div>
           </div>
         )}
-
-        {/* VERCEL ANALYTICS */}
-        <Analytics />
 
       </body>
     </html>

@@ -110,15 +110,51 @@ export default function PlannersPage() {
     eventPrice: "",
     expectedAttendance: "",
     eventDescription: "",
-    eventImage: "",
     message: "",
   });
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>("");
+  const [isDragging, setIsDragging] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  function handleFileSelect(file: File | null) {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      alert("Please choose an image file (JPG, PNG, etc.)");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Image is too large — please choose one under 5MB.");
+      return;
+    }
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
+
+    let imageUrl = "";
+
+    if (imageFile) {
+      const fileExt = imageFile.name.split(".").pop();
+      const filePath = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("event-images")
+        .upload(filePath, imageFile);
+
+      if (uploadError) {
+        console.error("Error uploading image:", uploadError);
+        alert("We couldn't upload your image. You can still submit without it, or try a different file.");
+      } else {
+        const { data } = supabase.storage.from("event-images").getPublicUrl(filePath);
+        imageUrl = data.publicUrl;
+      }
+    }
+
     const { error } = await supabase
       .from("planner_applications")
       .insert([{
@@ -132,7 +168,7 @@ export default function PlannersPage() {
         event_price: parseInt(form.eventPrice) || 0,
         expected_attendance: parseInt(form.expectedAttendance) || 0,
         description: form.eventDescription,
-        event_image: form.eventImage,
+        event_image: imageUrl,
         message: form.message,
       }]);
     if (error) {
@@ -406,23 +442,48 @@ export default function PlannersPage() {
               </div>
 
               <div className="flex flex-col gap-2">
-                <label className="text-xs text-gray-400 font-medium uppercase tracking-wider">Event Image URL</label>
-                <input
-                  type="url"
-                  placeholder="https://example.com/your-event-poster.jpg"
-                  value={form.eventImage}
-                  onChange={(e) => setForm({ ...form, eventImage: e.target.value })}
-                  className={inputClass}
-                />
-                {form.eventImage && (
-                  <img
-                    src={form.eventImage}
-                    alt="Event preview"
-                    className="w-full h-40 object-cover rounded-xl mt-2 border border-white/10"
-                    onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                <label className="text-xs text-gray-400 font-medium uppercase tracking-wider">Event Image</label>
+                <label
+                  onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                  onDragLeave={() => setIsDragging(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setIsDragging(false);
+                    handleFileSelect(e.dataTransfer.files?.[0] || null);
+                  }}
+                  className={"flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-xl px-4 py-8 cursor-pointer transition text-center " +
+                    (isDragging
+                      ? "border-green-400 bg-green-400/5"
+                      : "border-white/15 hover:border-white/30")}>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleFileSelect(e.target.files?.[0] || null)}
+                    className="hidden"
                   />
+                  {imagePreview ? (
+                    <img
+                      src={imagePreview}
+                      alt="Event preview"
+                      className="w-full h-40 object-cover rounded-xl border border-white/10"
+                    />
+                  ) : (
+                    <>
+                      <span className="text-3xl">📷</span>
+                      <p className="text-white text-sm font-medium">Drag & drop your event poster here</p>
+                      <p className="text-gray-500 text-xs">or click to choose a file (JPG, PNG — max 5MB)</p>
+                    </>
+                  )}
+                </label>
+                {imageFile && (
+                  <button
+                    type="button"
+                    onClick={() => { setImageFile(null); setImagePreview(""); }}
+                    className="text-xs text-gray-500 hover:text-white transition self-start">
+                    Remove image
+                  </button>
                 )}
-                <p className="text-xs text-gray-600">Paste a link to your event poster or banner. If left empty we will use a default image.</p>
+                <p className="text-xs text-gray-600">If left empty, we will use a default image.</p>
               </div>
 
               <div className="flex flex-col gap-2">

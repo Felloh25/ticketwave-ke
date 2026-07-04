@@ -1023,6 +1023,13 @@ def main():
 
     print(f"\nTOTAL: {len(events)} unique events found")
 
+    # Diagnostic: confirm whether ticket_url is actually present at this
+    # point, before it gets saved to Supabase.
+    with_url = sum(1 for e in events if e.get("ticket_url"))
+    print(f"Events with a ticket_url found: {with_url}/{len(events)}")
+    if events:
+        print(f"Sample ticket_url: {events[0].get('ticket_url')!r}")
+
     inserted, skipped = persist_events_to_supabase(events)
     print(f"\nSynced to Supabase: {inserted} new events added, {skipped} skipped (duplicates/errors)")
 

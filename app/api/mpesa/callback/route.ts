@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 // Safaricom calls this URL automatically after the customer enters their
 // PIN (or cancels/times out). It is NOT called by our own frontend.
@@ -14,6 +14,10 @@ export async function POST(request: NextRequest) {
 
     const checkoutRequestId = callback.CheckoutRequestID;
     const resultCode = callback.ResultCode;
+    const resultDesc = callback.ResultDesc;
+
+    // Logged so you can see the exact reason in Vercel's function logs.
+    console.log("M-Pesa callback received:", JSON.stringify(callback));
 
     if (resultCode === 0) {
       // Payment succeeded — pull the receipt number out of the metadata array.
@@ -24,18 +28,21 @@ export async function POST(request: NextRequest) {
 
       const mpesaReceipt = getValue("MpesaReceiptNumber");
 
-      await supabaseAdmin
+      await getSupabaseAdmin()
         .from("orders")
         .update({
           payment_status: "completed",
           mpesa_receipt: mpesaReceipt ? String(mpesaReceipt) : null,
+          payment_result_desc: resultDesc,
         })
         .eq("checkout_request_id", checkoutRequestId);
     } else {
       // User cancelled, entered wrong PIN, timed out, insufficient funds, etc.
-      await supabaseAdmin
+      // resultDesc holds Safaricom's human-readable reason — saved so it's
+      // visible directly in the Supabase table instead of only in logs.
+      await getSupabaseAdmin()
         .from("orders")
-        .update({ payment_status: "failed" })
+        .update({ payment_status: "failed", payment_result_desc: resultDesc })
         .eq("checkout_request_id", checkoutRequestId);
     }
 

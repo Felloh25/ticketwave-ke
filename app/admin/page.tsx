@@ -24,6 +24,8 @@ type Order = {
   email: string;
   phone: string;
   payment_method: string;
+  payment_status: string | null;
+  mpesa_receipt: string | null;
   created_at: string;
 };
 
@@ -168,7 +170,9 @@ export default function AdminPage() {
     { id: "messages", label: "Messages", count: messages.length },
   ];
 
-  const totalRevenue = orders.reduce((sum, o) => sum + o.total, 0);
+  const totalRevenue = orders
+    .filter((o) => o.payment_status === "completed" || o.payment_status === null)
+    .reduce((sum, o) => sum + o.total, 0);
   const pendingEvents = events.filter((e) => e.status === "pending").length;
   const pendingApps = applications.filter((a) => a.status === "pending").length;
 
@@ -335,9 +339,19 @@ export default function AdminPage() {
                     <p className="text-green-400 font-bold text-sm">
                       {order.total === 0 ? "Free" : "KES " + order.total.toLocaleString()}
                     </p>
-                    <span className="text-xs bg-green-400/20 text-green-400 px-2 py-0.5 rounded-full">
-                      confirmed
+                    <span className={"text-xs px-2 py-0.5 rounded-full inline-block " +
+                      (order.payment_status === "failed"
+                        ? "bg-red-400/20 text-red-400"
+                        : order.payment_status === "pending"
+                        ? "bg-yellow-400/20 text-yellow-400"
+                        : "bg-green-400/20 text-green-400")}>
+                      {order.payment_status === "failed" ? "failed"
+                        : order.payment_status === "pending" ? "pending"
+                        : "confirmed"}
                     </span>
+                    {order.mpesa_receipt && (
+                      <p className="text-xs text-gray-600 mt-1">{order.mpesa_receipt}</p>
+                    )}
                   </div>
                 </div>
               </div>

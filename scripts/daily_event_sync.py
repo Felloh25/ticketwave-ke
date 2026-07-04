@@ -961,6 +961,7 @@ def persist_events_to_supabase(events: list[dict]) -> tuple[int, int]:
             "price": parse_price_to_kes(event.get("cost")),
             "tag": CATEGORY_MAP.get(event.get("category") or "", "Music"),
             "image_url": resolve_image_url(event.get("image_url")),
+            "ticket_url": event.get("ticket_url") or None,
             "status": "approved",
         }
 

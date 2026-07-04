@@ -12,6 +12,7 @@ type Event = {
   tag: string;
   image_url: string;
   status: string;
+  ticket_url: string | null;
 };
 
 const categories = ["All", "Music", "Tech", "Food", "Sports", "Art", "Comedy", "Networking"];
@@ -193,9 +194,19 @@ export default function EventsPage() {
                     </button>
                   </div>
 
-                  <a href={"/tickets?event=" + encodeURIComponent(event.title)} className="block text-center text-xs bg-green-400 text-black px-4 py-2.5 rounded-full hover:bg-green-300 transition font-bold w-full">
-                    Get Ticket
-                  </a>
+                  {event.ticket_url ? (
+                    <a
+                      href={event.ticket_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block text-center text-xs bg-green-400 text-black px-4 py-2.5 rounded-full hover:bg-green-300 transition font-bold w-full">
+                      Get Ticket ↗
+                    </a>
+                  ) : (
+                    <a href={"/tickets?event=" + encodeURIComponent(event.title)} className="block text-center text-xs bg-green-400 text-black px-4 py-2.5 rounded-full hover:bg-green-300 transition font-bold w-full">
+                      Get Ticket
+                    </a>
+                  )}
                 </div>
               </div>
             ))}

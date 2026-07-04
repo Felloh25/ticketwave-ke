@@ -12,6 +12,7 @@ type Event = {
   price: number;
   tag: string;
   image_url: string;
+  ticket_url: string | null;
 };
 
 const tagColors: Record<string, string> = {
@@ -129,7 +130,8 @@ export default function Home() {
             <span className="text-green-400">Create Memories.</span>
           </h1>
           <p className="text-lg text-gray-400 max-w-xl mx-auto mb-10 leading-relaxed">
-            TicketWave KE is Kenya's event ticketing platform discover events, book tickets via M-Pesa, and manage your account
+            Concerts, family days, hackathons, food festivals and more —
+            discover events near you, for every age and every mood.
           </p>
           <div className="flex flex-wrap gap-4 justify-center">
             <Link href="/events" className="bg-green-400 text-black px-8 py-3.5 rounded-full text-sm font-bold hover:bg-green-300 transition shadow-lg shadow-green-400/20">
@@ -248,9 +250,19 @@ export default function Home() {
                       <span className="text-sm font-bold text-green-400">
                         {event.price === 0 ? "Free" : "KES " + event.price.toLocaleString()}
                       </span>
-                      <Link href={"/tickets?event=" + encodeURIComponent(event.title)} className="text-xs bg-green-400 text-black px-4 py-2 rounded-full hover:bg-green-300 transition font-bold">
-                        Get Ticket
-                      </Link>
+                      {event.ticket_url ? (
+                        <a
+                          href={event.ticket_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs bg-green-400 text-black px-4 py-2 rounded-full hover:bg-green-300 transition font-bold">
+                          Get Ticket ↗
+                        </a>
+                      ) : (
+                        <Link href={"/tickets?event=" + encodeURIComponent(event.title)} className="text-xs bg-green-400 text-black px-4 py-2 rounded-full hover:bg-green-300 transition font-bold">
+                          Get Ticket
+                        </Link>
+                      )}
                     </div>
                   </div>
                 </div>

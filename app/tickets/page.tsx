@@ -14,6 +14,7 @@ type Event = {
   image_url: string;
   status: string;
   ticket_url: string | null;
+  source: string | null;
 };
 
 const tagColors: Record<string, string> = {
@@ -55,11 +56,10 @@ function TicketsPageContent() {
       if (error) {
         console.error("Error fetching events:", error);
       } else {
-        // Events with a ticket_url belong to another site (scraped from
-        // Eventbrite, AllEvents, etc.) — we don't have the right to sell
-        // those, so they're excluded here and only ever linked to
-        // externally from the events/home pages.
-        const list = (data || []).filter((e) => !e.ticket_url);
+        // Scraped events (from Eventbrite, AllEvents, etc.) belong to
+        // another site — we don't have the right to sell those, so all of
+        // them are excluded here, whether or not we found their real link.
+        const list = (data || []).filter((e) => e.source !== "scraped");
         setEvents(list);
 
         // If we arrived via a "Get tickets" link from the events page,

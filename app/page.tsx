@@ -13,6 +13,7 @@ type Event = {
   tag: string;
   image_url: string;
   ticket_url: string | null;
+  source: string | null;
 };
 
 const tagColors: Record<string, string> = {
@@ -258,6 +259,8 @@ export default function Home() {
                           className="text-xs bg-green-400 text-black px-4 py-2 rounded-full hover:bg-green-300 transition font-bold">
                           Get Ticket ↗
                         </a>
+                      ) : event.source === "scraped" ? (
+                        <span className="text-xs text-gray-600 px-4 py-2">Link unavailable</span>
                       ) : (
                         <Link href={"/tickets?event=" + encodeURIComponent(event.title)} className="text-xs bg-green-400 text-black px-4 py-2 rounded-full hover:bg-green-300 transition font-bold">
                           Get Ticket

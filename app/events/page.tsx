@@ -13,6 +13,7 @@ type Event = {
   image_url: string;
   status: string;
   ticket_url: string | null;
+  source: string | null;
 };
 
 const categories = ["All", "Music", "Tech", "Food", "Sports", "Art", "Comedy", "Networking"];
@@ -202,6 +203,10 @@ export default function EventsPage() {
                       className="block text-center text-xs bg-green-400 text-black px-4 py-2.5 rounded-full hover:bg-green-300 transition font-bold w-full">
                       Get Ticket ↗
                     </a>
+                  ) : event.source === "scraped" ? (
+                    <p className="text-center text-xs text-gray-600 px-4 py-2.5 w-full">
+                      Ticket link unavailable
+                    </p>
                   ) : (
                     <a href={"/tickets?event=" + encodeURIComponent(event.title)} className="block text-center text-xs bg-green-400 text-black px-4 py-2.5 rounded-full hover:bg-green-300 transition font-bold w-full">
                       Get Ticket

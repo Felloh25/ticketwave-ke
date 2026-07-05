@@ -84,7 +84,7 @@ def generate_with_search(prompt: str) -> tuple[str, list[str]]:
                 urls = [c.web.uri for c in chunks if c.web and c.web.uri]
             except Exception:
                 pass
-            return response.text, urls
+            return response.text or "", urls
         except Exception as e:
             msg = str(e)
             if "429" in msg or "quota" in msg.lower():

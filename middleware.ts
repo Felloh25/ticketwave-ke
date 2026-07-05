@@ -4,7 +4,7 @@ import { createServerClient } from "@supabase/ssr";
 // Add any path here that should require the visitor to be logged in.
 // Currently just /admin — add more (e.g. "/account", "/my-tickets") as
 // those pages get built.
-const PROTECTED_PATHS = ["/admin"];
+const PROTECTED_PATHS = ["/admin", "/my-tickets"];
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -60,5 +60,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*"],
+  matcher: ["/admin/:path*", "/my-tickets/:path*"],
 };

@@ -3,8 +3,9 @@ import { useState,useEffect } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { FaTiktok, FaXTwitter, FaInstagram, FaWhatsapp } from "react-icons/fa6";
+import { supabase } from "@/lib/supabase";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,7 +33,29 @@ export default function RootLayout({
   const [menuOpen, setMenuOpen] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setUserEmail(data.user?.email ?? null);
+      setAuthChecked(true);
+    });
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUserEmail(session?.user?.email ?? null);
+    });
+
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    setMenuOpen(false);
+    router.push("/");
+  }
 
   useEffect(() => {
     // Disabled: this used to auto-pop a welcome/login prompt 2s after
@@ -77,7 +100,7 @@ export default function RootLayout({
             {/* LOGO */}
             <Link href="/" className="flex items-center gap-2 flex-shrink-0">
               <div className="w-8 h-8 bg-green-400 rounded-lg flex items-center justify-center flex-shrink-0">
-                <span className="text-black font-bold text-xs">FM</span>
+                <span className="text-black font-bold text-xs">TW</span>
               </div>
               <span className="text-lg font-bold tracking-tight text-white md:text-xl">
                 TicketWave<span className="text-green-400">KE</span>
@@ -100,17 +123,34 @@ export default function RootLayout({
 
             {/* RIGHT ACTIONS */}
             <div className="flex items-center gap-2">
-              <Link
-                href="/login"
-                className="hidden md:block text-sm text-gray-400 hover:text-white transition px-3 py-2 rounded-full hover:bg-white/5">
-                Login
-              </Link>
-              <Link
-                href="/register"
-                className="hidden md:flex items-center gap-1.5 text-sm font-semibold text-black bg-green-400 px-4 py-2 rounded-full hover:bg-green-300 hover:scale-105 transition-all shadow-lg shadow-green-400/20">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
-                Sign Up
-              </Link>
+              {authChecked && userEmail ? (
+                <>
+                  <Link
+                    href="/my-tickets"
+                    className="hidden md:block text-sm text-gray-400 hover:text-white transition px-3 py-2 rounded-full hover:bg-white/5">
+                    My Tickets
+                  </Link>
+                  <button
+                    onClick={handleLogout}
+                    className="hidden md:flex items-center gap-1.5 text-sm font-semibold text-black bg-green-400 px-4 py-2 rounded-full hover:bg-green-300 hover:scale-105 transition-all shadow-lg shadow-green-400/20">
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href="/login"
+                    className="hidden md:block text-sm text-gray-400 hover:text-white transition px-3 py-2 rounded-full hover:bg-white/5">
+                    Login
+                  </Link>
+                  <Link
+                    href="/register"
+                    className="hidden md:flex items-center gap-1.5 text-sm font-semibold text-black bg-green-400 px-4 py-2 rounded-full hover:bg-green-300 hover:scale-105 transition-all shadow-lg shadow-green-400/20">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+                    Sign Up
+                  </Link>
+                </>
+              )}
               <Link
                 href="/tickets"
                 className="text-xs md:text-sm font-bold text-black bg-green-400 px-3 md:px-4 py-2 rounded-full hover:bg-green-300 transition whitespace-nowrap md:hidden">
@@ -139,12 +179,27 @@ export default function RootLayout({
                 </Link>
               ))}
               <div className="border-t border-white/10 mt-1 pt-1 flex flex-col gap-1">
-                <Link href="/login" className="rounded-xl px-4 py-3 text-sm text-gray-400 hover:bg-white/5 hover:text-white transition">
-                  Login
-                </Link>
-                <Link href="/register" className="rounded-xl px-4 py-3 text-sm font-bold text-black bg-green-400 hover:bg-green-300 transition text-center">
-                  Sign Up Free
-                </Link>
+                {authChecked && userEmail ? (
+                  <>
+                    <Link href="/my-tickets" className="rounded-xl px-4 py-3 text-sm text-gray-400 hover:bg-white/5 hover:text-white transition">
+                      My Tickets
+                    </Link>
+                    <button
+                      onClick={handleLogout}
+                      className="rounded-xl px-4 py-3 text-sm font-bold text-black bg-green-400 hover:bg-green-300 transition text-center">
+                      Logout
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Link href="/login" className="rounded-xl px-4 py-3 text-sm text-gray-400 hover:bg-white/5 hover:text-white transition">
+                      Login
+                    </Link>
+                    <Link href="/register" className="rounded-xl px-4 py-3 text-sm font-bold text-black bg-green-400 hover:bg-green-300 transition text-center">
+                      Sign Up Free
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
           )}

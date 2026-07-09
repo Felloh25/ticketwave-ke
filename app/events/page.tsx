@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
 type Event = {
@@ -12,8 +13,6 @@ type Event = {
   tag: string;
   image_url: string;
   status: string;
-  ticket_url: string | null;
-  source: string | null;
 };
 
 const categories = ["All", "Music", "Tech", "Food", "Sports", "Art", "Comedy", "Networking"];
@@ -60,19 +59,17 @@ export default function EventsPage() {
     return matchCategory && matchSearch;
   });
 
-  async function handleShare(event: Event) {
-    const shareUrl = window.location.origin + "/tickets?event=" + encodeURIComponent(event.title);
+  async function handleShare(e: React.MouseEvent, event: Event) {
+    e.preventDefault();
+    e.stopPropagation();
+    const shareUrl = window.location.origin + "/events/" + event.id;
     const shareText = "Check out " + event.title + " on " + event.date + " at " + event.location + " — book your ticket on TicketWave KE!";
 
     if (navigator.share) {
       try {
-        await navigator.share({
-          title: event.title,
-          text: shareText,
-          url: shareUrl,
-        });
+        await navigator.share({ title: event.title, text: shareText, url: shareUrl });
       } catch (err) {
-        // user cancelled, do nothing
+        // user cancelled
       }
     } else {
       navigator.clipboard.writeText(shareText + " " + shareUrl);
@@ -145,75 +142,50 @@ export default function EventsPage() {
         {!loading && filtered.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {filtered.map((event) => (
-              <div key={event.id} className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden hover:border-green-400/40 transition group">
-                <div className="relative h-44 overflow-hidden">
+              <Link
+                href={"/events/" + event.id}
+                key={event.id}
+                className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden hover:border-green-400/40 transition group cursor-pointer block">
+                <div className="relative h-52 overflow-hidden">
                   <img
                     src={event.image_url}
                     alt={event.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition duration-500 brightness-90"
+                    className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
                   />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
                   <span className={"absolute top-3 left-3 text-xs font-bold px-3 py-1 rounded-full " + (tagColors[event.tag] || "bg-gray-400 text-black")}>
                     {event.tag}
                   </span>
-                  {event.price === 0 && (
-                    <span className="absolute top-3 right-3 text-xs font-bold bg-green-400 text-black px-3 py-1 rounded-full">
-                      Free
-                    </span>
-                  )}
+                  <span className="absolute top-3 right-3 text-xs font-bold bg-black/70 backdrop-blur-sm text-green-400 px-3 py-1.5 rounded-full border border-green-400/30">
+                    {event.price === 0 ? "Free Entry" : "KES " + event.price.toLocaleString()}
+                  </span>
+                  <div className="absolute bottom-3 left-3 right-3">
+                    <h3 className="font-bold text-white text-base leading-snug drop-shadow-lg line-clamp-2">
+                      {event.title}
+                    </h3>
+                  </div>
                 </div>
-                <div className="p-5">
-                  <h3 className="font-semibold text-white mb-2 group-hover:text-green-400 transition leading-snug">
-                    {event.title}
-                  </h3>
+                <div className="p-4">
                   <div className="flex items-center gap-1.5 mb-1">
                     <span className="text-gray-600">📅</span>
                     <p className="text-xs text-gray-500">{event.date}</p>
                   </div>
-                  <div className="flex items-center gap-1.5 mb-4">
+                  <div className="flex items-center gap-1.5 mb-3">
                     <span className="text-gray-600">📍</span>
                     <p className="text-xs text-gray-500">{event.location}</p>
                   </div>
-
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm font-bold text-green-400">
-                      {event.price === 0 ? "Free" : "KES " + event.price.toLocaleString()}
-                    </span>
+                  <div className="flex items-center justify-between pt-3 border-t border-white/10">
                     <button
-                      onClick={() => handleShare(event)}
+                      onClick={(e) => handleShare(e, event)}
                       className="flex items-center gap-1.5 text-xs text-gray-400 border border-white/10 px-3 py-1.5 rounded-full hover:border-green-400/40 hover:text-green-400 transition">
-                      {copiedId === event.id ? (
-                        <>
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12" /></svg>
-                          Copied
-                        </>
-                      ) : (
-                        <>
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" /></svg>
-                          Share
-                        </>
-                      )}
+                      {copiedId === event.id ? "Copied" : "Share"}
                     </button>
+                    <span className="text-xs bg-green-400 text-black px-4 py-2 rounded-full font-bold">
+                      View Details
+                    </span>
                   </div>
-
-                  {event.ticket_url ? (
-                    <a
-                      href={event.ticket_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block text-center text-xs bg-green-400 text-black px-4 py-2.5 rounded-full hover:bg-green-300 transition font-bold w-full">
-                      Get Ticket ↗
-                    </a>
-                  ) : event.source === "scraped" ? (
-                    <p className="text-center text-xs text-gray-600 px-4 py-2.5 w-full">
-                      Ticket link unavailable
-                    </p>
-                  ) : (
-                    <a href={"/tickets?event=" + encodeURIComponent(event.title)} className="block text-center text-xs bg-green-400 text-black px-4 py-2.5 rounded-full hover:bg-green-300 transition font-bold w-full">
-                      Get Ticket
-                    </a>
-                  )}
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         )}

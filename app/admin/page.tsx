@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 
 type Event = {
-  id: string;
+  id: number;
   title: string;
   date: string;
   location: string;
@@ -24,8 +24,6 @@ type Order = {
   email: string;
   phone: string;
   payment_method: string;
-  payment_status: string | null;
-  mpesa_receipt: string | null;
   created_at: string;
 };
 
@@ -56,28 +54,56 @@ type ContactMessage = {
   created_at: string;
 };
 
+const fallbackImages: Record<string, string[]> = {
+  Music: [
+    "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=600&q=80",
+    "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600&q=80",
+    "https://images.unsplash.com/photo-1571266028243-d220c6a7f2be?w=600&q=80",
+  ],
+  Tech: [
+    "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=600&q=80",
+    "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=600&q=80",
+    "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=600&q=80",
+  ],
+  Food: [
+    "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=600&q=80",
+    "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=600&q=80",
+    "https://images.unsplash.com/photo-1555244162-803834f70033?w=600&q=80",
+  ],
+  Sports: [
+    "https://images.unsplash.com/photo-1513593771513-7b58b6c4af38?w=600&q=80",
+    "https://images.unsplash.com/photo-1452626038306-9aae5e071dd3?w=600&q=80",
+    "https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=600&q=80",
+  ],
+  Comedy: [
+    "https://images.unsplash.com/photo-1527224538127-2104bb71c51b?w=600&q=80",
+    "https://images.unsplash.com/photo-1585699324551-f6c309eedeca?w=600&q=80",
+  ],
+  Art: [
+    "https://images.unsplash.com/photo-1531243269054-5ebf6f34081e?w=600&q=80",
+    "https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?w=600&q=80",
+  ],
+  Networking: [
+    "https://images.unsplash.com/photo-1540317580384-e5d43616b9aa?w=600&q=80",
+    "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=600&q=80",
+  ],
+};
+
+function getFallbackImage(tag: string): string {
+  const options = fallbackImages[tag] || fallbackImages["Networking"];
+  return options[Math.floor(Math.random() * options.length)];
+}
+
 export default function AdminPage() {
+  const [password, setPassword] = useState("");
   const [authed, setAuthed] = useState(false);
-  const [checkingAuth, setCheckingAuth] = useState(true);
+  const [authLoading, setAuthLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("events");
   const [events, setEvents] = useState<Event[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [applications, setApplications] = useState<PlannerApplication[]>([]);
   const [messages, setMessages] = useState<ContactMessage[]>([]);
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    // The middleware already blocks logged-out visitors before this page
-    // ever loads. This second check confirms the logged-in user actually
-    // has the admin role — not just any account — before showing anything.
-    async function checkAdminRole() {
-      const { data } = await supabase.auth.getUser();
-      const role = data.user?.app_metadata?.role;
-      setAuthed(role === "admin");
-      setCheckingAuth(false);
-    }
-    checkAdminRole();
-  }, []);
 
   useEffect(() => {
     if (authed) {
@@ -100,7 +126,23 @@ export default function AdminPage() {
     setLoading(false);
   }
 
-  async function updateEventStatus(id: string, status: string) {
+  async function handleLogin() {
+    setAuthLoading(true);
+    const res = await fetch("/api/admin-auth", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      setAuthed(true);
+    } else {
+      alert("Wrong password!");
+    }
+    setAuthLoading(false);
+  }
+
+  async function updateEventStatus(id: number, status: string) {
     await supabase.from("events").update({ status }).eq("id", id);
     fetchAll();
   }
@@ -111,22 +153,32 @@ export default function AdminPage() {
     if (status === "approved") {
       const app = applications.find((a) => a.id === id);
       if (app) {
-        await supabase.from("events").insert([{
-          title: app.event_name,
-          description: app.description,
-          date: app.event_date,
-          location: app.event_location,
-          price: app.event_price || 0,
-          tag: app.event_type,
-          image_url: app.event_image || "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=600&q=80",
-          status: "approved",
-        }]);
+        const { data: existing } = await supabase
+          .from("events")
+          .select("id")
+          .eq("title", app.event_name)
+          .eq("status", "approved");
+
+        if (existing && existing.length > 0) {
+          alert("An event with this title already exists and is approved. Skipping duplicate creation.");
+        } else {
+          await supabase.from("events").insert([{
+            title: app.event_name,
+            description: app.description,
+            date: app.event_date,
+            location: app.event_location,
+            price: app.event_price || 0,
+            tag: app.event_type,
+            image_url: app.event_image || getFallbackImage(app.event_type),
+            status: "approved",
+          }]);
+        }
       }
     }
     fetchAll();
   }
 
-  async function deleteEvent(id: string) {
+  async function deleteEvent(id: number) {
     if (confirm("Are you sure you want to delete this event?")) {
       await supabase.from("events").delete().eq("id", id);
       fetchAll();
@@ -141,23 +193,27 @@ export default function AdminPage() {
     });
   }
 
-  if (checkingAuth) {
-    return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-        <p className="text-gray-500 text-sm">Checking access...</p>
-      </div>
-    );
-  }
-
   if (!authed) {
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center px-6">
         <div className="bg-white/5 border border-white/10 rounded-2xl p-10 w-full max-w-sm text-center">
-          <span className="text-4xl mb-4 block">⛔</span>
-          <h1 className="text-white font-bold text-xl mb-2">Access Denied</h1>
-          <p className="text-gray-500 text-sm">
-            Your account doesn&apos;t have admin access. If you believe this is a mistake, contact the site owner.
-          </p>
+          <span className="text-4xl mb-4 block">🔐</span>
+          <h1 className="text-white font-bold text-xl mb-2">Admin Access</h1>
+          <p className="text-gray-500 text-sm mb-6">Enter your admin password to continue</p>
+          <input
+            type="password"
+            placeholder="Enter password..."
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-green-400/50 transition mb-4"
+          />
+          <button
+            onClick={handleLogin}
+            disabled={authLoading}
+            className="bg-green-400 text-black px-8 py-3 rounded-full text-sm font-bold hover:bg-green-300 transition w-full disabled:opacity-50">
+            {authLoading ? "Checking..." : "Login"}
+          </button>
         </div>
       </div>
     );
@@ -170,16 +226,13 @@ export default function AdminPage() {
     { id: "messages", label: "Messages", count: messages.length },
   ];
 
-  const totalRevenue = orders
-    .filter((o) => o.payment_status === "completed" || o.payment_status === null)
-    .reduce((sum, o) => sum + o.total, 0);
+  const totalRevenue = orders.reduce((sum, o) => sum + o.total, 0);
   const pendingEvents = events.filter((e) => e.status === "pending").length;
   const pendingApps = applications.filter((a) => a.status === "pending").length;
 
   return (
     <div className="min-h-screen bg-[#0a0a0a]">
 
-      {/* HEADER */}
       <div className="border-b border-white/10 px-6 py-5 flex items-center justify-between">
         <div>
           <h1 className="text-white font-bold text-xl">Admin Dashboard</h1>
@@ -194,7 +247,6 @@ export default function AdminPage() {
 
       <div className="max-w-7xl mx-auto px-6 py-8">
 
-        {/* STATS */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
             <p className="text-gray-500 text-xs mb-1">Total Events</p>
@@ -223,7 +275,6 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* TABS */}
         <div className="flex gap-2 mb-6 flex-wrap">
           {tabs.map((tab) => (
             <button
@@ -249,7 +300,6 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* EVENTS TAB */}
         {!loading && activeTab === "events" && (
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between mb-2">
@@ -312,7 +362,6 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* ORDERS TAB */}
         {!loading && activeTab === "orders" && (
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between mb-2">
@@ -339,19 +388,9 @@ export default function AdminPage() {
                     <p className="text-green-400 font-bold text-sm">
                       {order.total === 0 ? "Free" : "KES " + order.total.toLocaleString()}
                     </p>
-                    <span className={"text-xs px-2 py-0.5 rounded-full inline-block " +
-                      (order.payment_status === "failed"
-                        ? "bg-red-400/20 text-red-400"
-                        : order.payment_status === "pending"
-                        ? "bg-yellow-400/20 text-yellow-400"
-                        : "bg-green-400/20 text-green-400")}>
-                      {order.payment_status === "failed" ? "failed"
-                        : order.payment_status === "pending" ? "pending"
-                        : "confirmed"}
+                    <span className="text-xs bg-green-400/20 text-green-400 px-2 py-0.5 rounded-full">
+                      confirmed
                     </span>
-                    {order.mpesa_receipt && (
-                      <p className="text-xs text-gray-600 mt-1">{order.mpesa_receipt}</p>
-                    )}
                   </div>
                 </div>
               </div>
@@ -359,7 +398,6 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* APPLICATIONS TAB */}
         {!loading && activeTab === "applications" && (
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between mb-2">
@@ -429,7 +467,6 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* MESSAGES TAB */}
         {!loading && activeTab === "messages" && (
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between mb-2">

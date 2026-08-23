@@ -6,6 +6,26 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
 );
 
+const MONTHS: Record<string, number> = {
+  Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5,
+  Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11,
+};
+
+function parseEventDateString(dateStr: string): Date | null {
+  const match = dateStr.match(/([A-Za-z]{3})\s+(\d{1,2})/);
+  if (!match) return null;
+  const month = MONTHS[match[1]];
+  const day = parseInt(match[2]);
+  if (month === undefined || isNaN(day)) return null;
+  const now = new Date();
+  let year = now.getFullYear();
+  const candidate = new Date(year, month, day);
+  if (candidate.getTime() < now.getTime() - 1000 * 60 * 60 * 24 * 180) {
+    year += 1;
+  }
+  return new Date(year, month, day);
+}
+
 export async function GET(request: Request) {
   const authHeader = request.headers.get("authorization");
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -27,10 +47,10 @@ export async function GET(request: Request) {
 
     if (events) {
       for (const event of events) {
-        const eventDate = new Date(event.date);
+        const eventDate = parseEventDateString(event.date);
 
         // If the date is valid and has passed, move to gallery
-        if (!isNaN(eventDate.getTime()) && eventDate < today) {
+        if (eventDate && eventDate < today) {
           // Insert into past_events
           await supabase.from("past_events").insert([{
             title: event.title,

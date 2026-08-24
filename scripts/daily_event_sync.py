@@ -9,8 +9,6 @@ import time
 from datetime import datetime, timedelta
 import re
 import hashlib
-import requests
-from urllib.parse import urlparse
 
 # Fix Windows cp1252 terminal encoding issues with special characters
 if sys.stdout.encoding and sys.stdout.encoding.lower() != 'utf-8':
@@ -19,16 +17,8 @@ if sys.stdout.encoding and sys.stdout.encoding.lower() != 'utf-8':
 load_dotenv()
 client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
 
-# Ordered by preference — falls back if quota exceeded or unavailable.
-# NOTE: gemini-2.0-flash-001 / gemini-2.0-flash-lite-001 were deprecated by
-# Google on June 1, 2026 — don't add them back even if you see them in older
-# examples online, they'll just fail.
-MODELS = ["gemini-2.5-flash-lite", "gemini-2.5-flash"]
-
-# Free tier RPM is low (roughly 5-15 requests/minute depending on model).
-# Waiting this long BEFORE each call, rather than only reacting after a 429,
-# keeps us under that ceiling instead of constantly tripping it.
-FREE_TIER_PACING_SECONDS = 7
+# Ordered by preference — falls back if quota exceeded or unavailable
+MODELS = ["gemini-2.5-flash", "gemini-2.0-flash-lite-001", "gemini-2.0-flash-001"]
 
 
 # ---------------------------------------------------------------------------
@@ -36,7 +26,6 @@ FREE_TIER_PACING_SECONDS = 7
 # ---------------------------------------------------------------------------
 
 def generate(prompt: str) -> str:
-    time.sleep(FREE_TIER_PACING_SECONDS)
     for model_id in MODELS:
         try:
             response = client.models.generate_content(
@@ -49,7 +38,7 @@ def generate(prompt: str) -> str:
             msg = str(e)
             if "429" in msg or "quota" in msg.lower():
                 match = re.search(r"retry_delay\s*\{\s*seconds:\s*(\d+)", msg)
-                wait = int(match.group(1)) + 2 if match else 20
+                wait = int(match.group(1)) + 2 if match else 15
                 print(f"  Quota hit on {model_id}, waiting {wait}s...")
                 time.sleep(wait)
                 continue
@@ -61,12 +50,11 @@ def generate(prompt: str) -> str:
 
 
 # Search-grounded models (grounding only available on flash variants)
-SEARCH_MODELS = ["gemini-2.5-flash-lite", "gemini-2.5-flash"]
+SEARCH_MODELS = ["gemini-2.0-flash-001", "gemini-2.5-flash"]
 
 def generate_with_search(prompt: str) -> tuple[str, list[str]]:
     """Generate with Google Search grounding. Returns (text, source_urls).
     Falls back to plain generate() if quota/billing not available."""
-    time.sleep(FREE_TIER_PACING_SECONDS)
     for model_id in SEARCH_MODELS:
         try:
             response = client.models.generate_content(
@@ -84,7 +72,7 @@ def generate_with_search(prompt: str) -> tuple[str, list[str]]:
                 urls = [c.web.uri for c in chunks if c.web and c.web.uri]
             except Exception:
                 pass
-            return response.text or "", urls
+            return response.text, urls
         except Exception as e:
             msg = str(e)
             if "429" in msg or "quota" in msg.lower():
@@ -108,36 +96,24 @@ def generate_with_search(prompt: str) -> tuple[str, list[str]]:
 
 HASHTAGS: dict[str, list[str]] = {
     "nairobi": [
-        "nairobievents", "nairobiparty", "nairobiweekend",
-        "kenyaconcerts", "blanketsandwine", "solfestafrica", "nairobimusic",
+        "nairobievents", "nairobiparty", "nairobiweekend", "nairobilife",
+        "nairobinightlife", "kenyaevents", "kenyaconcerts", "nairobifestivals",
+        "blanketsandwine", "solfestafrica", "nairobifood", "nairobicomedy",
+        "nairobigaming", "nairobitech", "nairobimusic",
     ],
     "mombasa": [
         "mombasaevents", "mombasanightlife", "mombasaweekend", "coastevents",
     ],
     "kisumu": ["kisumuevents", "kisumulife"],
     "nakuru": ["nakuruevents"],
-    "lagos": [
-        "lagosevents", "lagosparty", "lagosnightlife", "lagosweekend",
-        "lagosmusic", "lagosconcerts", "dettyrave",
-    ],
-    "accra": ["accraevents", "accranightlife", "accraweekend"],
-    "cape-town": ["capetownevents", "capetownnightlife", "capetownmusic"],
-    "johannesburg": ["joburglife", "joburgevents", "joburgnightlife"],
-    "london": ["londonevents", "londonnightlife", "londonmusic"],
-    "new-york": ["nycevents", "nycnightlife", "nycmusic"],
-    "dubai": ["dubaievents", "dubainightlife", "dubaiparty"],
+    "eldoret": ["eldoretevents"],
+    "machakos": ["machakosevents"],
 }
 
 
 def _hashtag_sources(city_slug: str) -> list[tuple[str, str]]:
-    """Build Instagram hashtag URLs for a city.
-
-    TikTok hashtag pages used to be included too, but in practice every
-    single one burned a full Gemini call and still returned 0 events —
-    unlike Instagram pages, which short-circuit cheaply (no AI call) when
-    there's too little content to bother analyzing. Dropping TikTok cuts
-    a large chunk of wasted quota usage with no real loss.
-    """
+    """Build Instagram hashtag URLs for a city. TikTok removed — Felix's call,
+    Instagram content is more reliably event-poster-driven."""
     tags = HASHTAGS.get(city_slug, [])
     sources: list[tuple[str, str]] = []
     for tag in tags:
@@ -179,29 +155,6 @@ def get_sources(city: str, country: str) -> list[tuple[str, str]]:
         ],
         "nakuru": [
             ("https://www.happening.co.ke/nakuru", "Happening Nakuru"),
-        ],
-        "lagos": [
-            ("https://www.eventbrite.com/d/nigeria--lagos/all-events/", "Eventbrite Lagos"),
-        ],
-        "london": [
-            ("https://www.eventbrite.com/d/united-kingdom--london/nightlife/", "Eventbrite London Nightlife"),
-            ("https://www.eventbrite.com/d/united-kingdom--london/music/", "Eventbrite London Music"),
-        ],
-        "new-york": [
-            ("https://www.eventbrite.com/d/ny--new-york-city/nightlife/", "Eventbrite NYC Nightlife"),
-            ("https://www.eventbrite.com/d/ny--new-york-city/music/", "Eventbrite NYC Music"),
-        ],
-        "accra": [
-            ("https://www.eventbrite.com/d/ghana--accra/all-events/", "Eventbrite Accra"),
-        ],
-        "cape-town": [
-            ("https://www.eventbrite.com/d/south-africa--cape-town/all-events/", "Eventbrite Cape Town"),
-        ],
-        "johannesburg": [
-            ("https://www.eventbrite.com/d/south-africa--johannesburg/all-events/", "Eventbrite Johannesburg"),
-        ],
-        "dubai": [
-            ("https://www.eventbrite.com/d/united-arab-emirates--dubai/all-events/", "Eventbrite Dubai"),
         ],
     }
 
@@ -287,7 +240,7 @@ class EventScraper:
             return False
         return any(d in url for d in self.ENRICH_DOMAINS)
 
-    SOCIAL_DOMAINS = ["instagram.com", "tiktok.com", "twitter.com", "x.com"]
+    SOCIAL_DOMAINS = ["instagram.com", "twitter.com", "x.com"]
 
     def _is_social(self, url: str) -> bool:
         return any(d in url for d in self.SOCIAL_DOMAINS)
@@ -763,15 +716,12 @@ DEFAULT_CITIES = [
     ("Mombasa",       "Kenya"),
     ("Kisumu",        "Kenya"),
     ("Nakuru",        "Kenya"),
-    # Africa
-    ("Lagos",         "Nigeria"),
-    ("Accra",         "Ghana"),
-    ("Cape Town",     "South Africa"),
-    ("Johannesburg",  "South Africa"),
-    # Global
-    ("London",        "United Kingdom"),
-    ("New York",      "United States"),
-    ("Dubai",         "United Arab Emirates"),
+    ("Eldoret",       "Kenya"),
+    ("Machakos",      "Kenya"),
+    # International sources removed — TicketWave KE only lists Kenyan events.
+    # ("Lagos", "Nigeria"), ("Accra", "Ghana"), ("Cape Town", "South Africa"),
+    # ("Johannesburg", "South Africa"), ("London", "United Kingdom"),
+    # ("New York", "United States"), ("Dubai", "United Arab Emirates"),
 ]
 
 
@@ -828,51 +778,46 @@ CATEGORY_MAP = {
     "Other": "Music",
 }
 
-FALLBACK_IMAGE = "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=600&q=80"
-
-IMAGE_CHECK_HEADERS = {
-    # Some sites block requests with no browser-like User-Agent.
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-}
+FALLBACK_IMAGE_MIN_LENGTH = 30  # sanity check that image_url looks like a real URL, not empty/placeholder
 
 
-def resolve_image_url(image_url: str | None) -> str:
-    """Confirm a scraped image URL actually loads a real image before using it.
+def has_real_poster(image_url: str | None) -> bool:
+    """True only if the event has an actual scraped image — no fallback
+    stock photos are used. Felix wants every auto-published event to have
+    its own real poster; events without one are skipped, not backfilled."""
+    if not image_url:
+        return False
+    url = image_url.strip()
+    if len(url) < FALLBACK_IMAGE_MIN_LENGTH:
+        return False
+    if not url.startswith("http"):
+        return False
+    return True
 
-    Scraped URLs sometimes turn out relative, expired, or hotlink-blocked —
-    those render as a broken image icon on the site. This does a quick check
-    and falls back to a generic placeholder instead of a broken link.
 
-    Many event/ticketing sites block image requests that don't carry a
-    Referer matching their own domain (hotlink protection) — without this,
-    plenty of perfectly real posters get wrongly rejected as "broken".
-    """
-    if not image_url or not image_url.startswith("http"):
-        return FALLBACK_IMAGE
+# ---------------------------------------------------------------------------
+# Content moderation — reject Sheng/slang and non-official-language titles
+# ---------------------------------------------------------------------------
+# TicketWave KE only publishes events described in official English or
+# Kiswahili. Common Sheng/slang markers below catch the most frequent cases;
+# this is a best-effort filter, not a perfect one — spot-check the site
+# periodically for anything that slips through since events auto-publish.
 
-    parsed = urlparse(image_url)
-    referer = f"{parsed.scheme}://{parsed.netloc}/"
-    headers = {**IMAGE_CHECK_HEADERS, "Referer": referer}
+SHENG_MARKERS = [
+    "bash", "kamkunji", "msoto", "mtaani", "kupiga", "story mob", "wazua",
+    "sherehe ya mtaa", "vibaz", "noma", "mzinga", "manzi", "buda",
+    "chapaa", "doo", "hustle bash", "raundi", "kuchill", "mzee wa area",
+]
 
-    for attempt_headers in (headers, IMAGE_CHECK_HEADERS):
-        try:
-            resp = requests.head(
-                image_url, headers=attempt_headers, timeout=6, allow_redirects=True
-            )
-            # Some CDNs don't support HEAD properly — treat those as
-            # inconclusive and fall through to a lightweight GET instead of
-            # trusting a 405/403.
-            if resp.status_code >= 400:
-                resp = requests.get(
-                    image_url, headers=attempt_headers, timeout=6, stream=True
-                )
-            content_type = resp.headers.get("content-type", "")
-            if resp.status_code < 400 and content_type.startswith("image/"):
-                return image_url
-        except Exception:
-            continue
 
-    return FALLBACK_IMAGE
+def fails_content_policy(title: str, description: str) -> bool:
+    """Returns True if the event should be rejected due to informal slang
+    or content that isn't official English/Kiswahili."""
+    combined = f"{title} {description}".lower()
+    for marker in SHENG_MARKERS:
+        if marker in combined:
+            return True
+    return False
 
 # Very rough, static conversion for non-KES prices. Not live exchange rates —
 # good enough to avoid showing "USD 140" as literally 140 KES, but treat
@@ -908,13 +853,7 @@ def parse_price_to_kes(cost: str | None) -> int:
 
 
 def format_display_date(date_str: str | None, time_str: str | None) -> str:
-    """Combine YYYY-MM-DD + time into 'Sat, Jul 12, 2026 - 4:00 PM' style.
-
-    The year MUST be included: the cleanup-events cron re-parses this string
-    with JavaScript's `new Date(...)`, and a date string with no year silently
-    defaults to 2001 — which would make every synced event look like it's
-    already in the past and get swept into the gallery immediately.
-    """
+    """Combine YYYY-MM-DD + time into TicketWave's 'Sat, Jul 12 - 4:00 PM' style."""
     if not date_str:
         return time_str or ""
     try:
@@ -922,7 +861,7 @@ def format_display_date(date_str: str | None, time_str: str | None) -> str:
     except ValueError:
         return f"{date_str} {time_str or ''}".strip()
 
-    base = d.strftime("%a, %b %d, %Y")
+    base = d.strftime("%a, %b %d")
     if time_str:
         return f"{base} - {time_str}"
     return base
@@ -947,20 +886,41 @@ def persist_events_to_supabase(events: list[dict]) -> tuple[int, int]:
 
     inserted = 0
     skipped = 0
+    rejected_content = 0
+    rejected_no_poster = 0
 
     for event in events:
         name = (event.get("name") or "").strip()
+        description = (event.get("description") or "").strip()
         date_val = event.get("date")
         if not name or not date_val:
             skipped += 1
             continue
+
+        # Content policy: official English/Kiswahili only, no Sheng/slang.
+        if fails_content_policy(name, description):
+            print(f"  Rejected (content policy): '{name}'")
+            rejected_content += 1
+            continue
+
+        # Poster policy: only events with their own real image get published.
+        # No fallback stock photos — if the scraper didn't find a genuine
+        # poster on the source page, the event is skipped rather than
+        # published with a generic placeholder.
+        image_url = event.get("image_url")
+        if not has_real_poster(image_url):
+            print(f"  Rejected (no real poster): '{name}'")
+            rejected_no_poster += 1
+            continue
+
+        display_date = format_display_date(date_val, event.get("time"))
 
         # Duplicate check: same title + same raw date already in the table.
         existing = (
             client.table("events")
             .select("id")
             .eq("title", name)
-            .eq("date", format_display_date(date_val, event.get("time")))
+            .eq("date", display_date)
             .limit(1)
             .execute()
         )
@@ -970,15 +930,17 @@ def persist_events_to_supabase(events: list[dict]) -> tuple[int, int]:
 
         row = {
             "title": name,
-            "description": event.get("description") or "",
-            "date": format_display_date(date_val, event.get("time")),
+            "description": description,
+            "date": display_date,
             "location": event.get("location") or "TBA",
             "price": parse_price_to_kes(event.get("cost")),
             "tag": CATEGORY_MAP.get(event.get("category") or "", "Music"),
-            "image_url": resolve_image_url(event.get("image_url")),
-            "ticket_url": event.get("ticket_url") or None,
+            "image_url": image_url,
+            # Auto-publishes straight away — Felix's call, since the whole
+            # point of scraping is updating the site without him needing
+            # to review each one. The content + poster filters above are
+            # what keep quality in check instead of a manual approval step.
             "status": "approved",
-            "source": "scraped",
         }
 
         try:
@@ -988,30 +950,13 @@ def persist_events_to_supabase(events: list[dict]) -> tuple[int, int]:
             print(f"  Failed to insert '{name}': {e}")
             skipped += 1
 
+    print(f"  Rejected (content policy): {rejected_content}")
+    print(f"  Rejected (no real poster): {rejected_no_poster}")
     return inserted, skipped
 
 
-ROTATION_CITIES = [
-    ("Nairobi", "Kenya"),
-    ("Mombasa", "Kenya"),
-    ("Kisumu", "Kenya"),
-    ("Eldoret", "Kenya"),
-    ("Machakos", "Kenya"),
-]
-
-
 def main():
-    # On the free Gemini tier, scraping several cities in one run reliably
-    # hits the quota. Instead, rotate ONE city per day (Mon->Nairobi,
-    # Tue->Mombasa, ...) so every city still gets synced regularly without
-    # exceeding free-tier limits. Set EVENT_CITIES explicitly to override
-    # this and force a specific city (handy for manual test runs).
-    if os.getenv("EVENT_CITIES", "").strip():
-        cities = parse_cities()
-    else:
-        weekday = datetime.utcnow().weekday()  # Monday = 0
-        cities = [ROTATION_CITIES[weekday % len(ROTATION_CITIES)]]
-
+    cities = parse_cities()
     all_events: list[dict] = []
 
     print("TICKETWAVE KE — DAILY EVENT SYNC")
@@ -1038,13 +983,6 @@ def main():
         return
 
     print(f"\nTOTAL: {len(events)} unique events found")
-
-    # Diagnostic: confirm whether ticket_url is actually present at this
-    # point, before it gets saved to Supabase.
-    with_url = sum(1 for e in events if e.get("ticket_url"))
-    print(f"Events with a ticket_url found: {with_url}/{len(events)}")
-    if events:
-        print(f"Sample ticket_url: {events[0].get('ticket_url')!r}")
 
     inserted, skipped = persist_events_to_supabase(events)
     print(f"\nSynced to Supabase: {inserted} new events added, {skipped} skipped (duplicates/errors)")
